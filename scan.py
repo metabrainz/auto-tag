@@ -72,4 +72,6 @@ class ScanCollection(object):
             mdata = flac.read(os.path.join(self.music_dir, relative_path))
         print("   add %-31s %-31s" % (mdata["recording"][:30], mdata["artist"][:30]))
 
+        mdata["file_name"] = fullpath
+
         self.collection.append(mdata)

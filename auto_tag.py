@@ -6,6 +6,7 @@ import requests
 from scan import ScanCollection
 import musicbrainzngs
 
+
 class AutoTagger():
 
     def __init__(self):
@@ -69,7 +70,6 @@ class AutoTagger():
     def load_releases(self, recording_mbids):
 
         post_data = [{"[recording_mbid]": r["mapped"]["recording_mbid"]} for r in recording_mbids]
-        print(",".join([ r["mapped"]["recording_mbid"] for r in recording_mbids]))
         r = requests.post("https://datasets.listenbrainz.org/releases-from-recordings/json", json=post_data)
         if r.status_code != 200:
             print("Could not load releases tracks: %d (%s)" % (r.status_code, r.text))
@@ -78,31 +78,78 @@ class AutoTagger():
         for result in r.json():
             release_mbid = result["release_mbid"]
             if release_mbid not in self.releases:
-                print(sorted(result["release"], key=lambda i: (i["medium_position"], i["position"])))
-                self.releases[release_mbid] = sorted(result["release"], key=lambda i: (i["medium_position"], i["position"]))
-
-            release = self.releases[release_mbid]
-            for r in release:
-                print("%2d %-29s" % (r["position"], r["recording_name"][:29]))
-
-            print("")
+                self.releases[release_mbid] = result["release"]
 
     def load_recordings_into_releases(self, recordings):
 
         release_index = defaultdict(list)
-        for release in self.releases:
-            print(release)
-            for recording in release:
-                release_index[recording["recording_mbid"]].append(release)
+        for release_mbid in self.releases:
+            release = self.releases[release_mbid]
+            for tnum, recording in enumerate(release):
+                release_index[recording["recording_mbid"]].append((release, tnum))
 
         for recording in recordings:
-            recording_mbid = recording["mapping"]["recording_mbid"]
-            for release in release_index[recording_mbid]:
-                for rel_recording in release:
-                    if rel_recording["recording_mbid"] == recording_mbid:
-                        if "files" not in rel_recording:
-                            rel_recording["files"] = []
-                        rel_recording.append(recording)
+            recording_mbid = recording["mapped"]["recording_mbid"]
+            for release, tnum in release_index[recording_mbid]:
+                rel_recording = release[tnum]
+                if "files" not in rel_recording:
+                    rel_recording["files"] = []
+                rel_recording["files"].append(recording["file_name"])
+
+        stats = []
+        for release_mbid in self.releases:
+            total = 0
+            file_count = 0
+            for recording in self.releases[release_mbid]:
+                if "files" in recording:
+                    file_count += len(recording["files"])
+                total += 1
+
+            if file_count == 1:
+                continue
+
+            stats.append({
+                "release_group_mbid": recording["release_group_mbid"],
+                "release_mbid": release_mbid,
+                "file_count": file_count,
+                "total": total,
+                "match": 1.0 / file_count / total,
+                "release": self.releases[release_mbid]
+            })
+
+        last_rg = ""
+        group = []
+        for entry in sorted(stats, key=lambda i: (i["release_group_mbid"], i["release_mbid"], i["match"])):
+            if last_rg != entry["release_group_mbid"]:
+                self.evaluate_match(group)
+                group = []
+
+            group.append(entry)
+            last_rg = entry["release_group_mbid"]
+
+        if len(group) != 0:
+            self.evaluate_match(group)
+
+
+    def evaluate_match(self, release_candidates):
+
+        # Check for perfect matches
+        for c in sorted(release_candidates, key=lambda i: i["release_group_mbid"]):
+            print(c["release_group_mbid"], c["release_mbid"], c["file_count"], c["total"])
+            if c["file_count"] == c["total"]:
+                print("full match! (release group %s" % c["release_group_mbid"])
+                self.print_match(c)
+                return
+
+
+    def print_match(self, release_candidate):
+        for r in release_candidate["release"]:
+            try:
+                files = r["files"][0]
+            except KeyError:
+                files = ""
+            print("%3d %3d %-40s %s" % (r["medium_position"], r["position"], r["recording_name"][:39], files)) 
+        print("")
 
 
 @click.command()
@@ -119,11 +166,11 @@ def scan_collection(path):
 
     at = AutoTagger()
     mapped, unidentified = at.map_collection(collection)
-    print("Unknown: %d items" % len(unidentified))
-    for mdata in unidentified:
-        print("   add %-31s %-31s" % (mdata["recording"][:30], mdata["artist"][:30]))
+    print("Unmapped: %d items" % len(unidentified))
+#    for mdata in unidentified:
+#        print("   add %-31s %-31s" % (mdata["recording"][:30], mdata["artist"][:30]))
 
-    print(" Mapped: %d items" % len(mapped))
+    print("  Mapped: %d items" % len(mapped))
 
     print("\nLoad releases")
     release = at.load_releases(mapped)
