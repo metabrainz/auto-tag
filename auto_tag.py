@@ -46,27 +46,6 @@ class AutoTagger():
 
         return results, unidentified
 
-    boo = """
-    [
-
-        {
-            "artist_credit_arg": "u2",
-            "artist_credit_id": 197,
-            "artist_credit_name": "U2",
-            "artist_mbids": "{a3cb23fc-acd3-4ce0-8f36-1e5aa6a18432}",
-            "index": 0,
-            "match_type": 4,
-            "recording_arg": "sunday bloody sunday",
-            "recording_mbid": "e95e5009-99b3-42d2-abdd-477967233b08",
-            "recording_name": "Sunday Bloody Sunday",
-            "release_mbid": "259eafd8-f34b-4292-ab0a-c00ac221253c",
-            "release_name": "War",
-            "year": 1983
-        }
-
-    ]
-    """
-
     def load_releases(self, recording_mbids):
 
         post_data = [{"[recording_mbid]": r["mapped"]["recording_mbid"]} for r in recording_mbids]
@@ -113,7 +92,7 @@ class AutoTagger():
                 "release_mbid": release_mbid,
                 "file_count": file_count,
                 "total": total,
-                "match": 1.0 / file_count / total,
+                "match": file_count / total,
                 "release": self.releases[release_mbid]
             })
 
@@ -130,17 +109,37 @@ class AutoTagger():
         if len(group) != 0:
             self.evaluate_match(group)
 
-
     def evaluate_match(self, release_candidates):
 
+        release_candidates.sort(key=lambda i: i["release_group_mbid"])
+
         # Check for perfect matches
-        for c in sorted(release_candidates, key=lambda i: i["release_group_mbid"]):
-            print(c["release_group_mbid"], c["release_mbid"], c["file_count"], c["total"])
+        for i, c in enumerate(release_candidates):
+            print(c["release_group_mbid"], c["release_mbid"], c["file_count"], c["total"], int(c["match"] * 100))
             if c["file_count"] == c["total"]:
                 print("full match! (release group %s" % c["release_group_mbid"])
                 self.print_match(c)
-                return
+                release_candidates.pop(i) 
+                break
 
+        max_value = 0
+        max_index = None
+        for index, c in enumerate(release_candidates):
+            if c["file_count"] == c["total"]:
+                continue
+
+            if max_index is None:
+                max_index = 0
+                max_value = c["match"]
+
+            if c["match"] > max_value:
+                max_index = index
+                max_value = c["match"]
+
+            if max_value > .6:
+                print("partial match (release group %s" % c["release_group_mbid"])
+                self.print_match(release_candidates[max_index])
+            break
 
     def print_match(self, release_candidate):
         for r in release_candidate["release"]:
@@ -148,7 +147,7 @@ class AutoTagger():
                 files = r["files"][0]
             except KeyError:
                 files = ""
-            print("%3d %3d %-40s %s" % (r["medium_position"], r["position"], r["recording_name"][:39], files)) 
+            print("%3d %3d %-40s %s" % (r["medium_position"], r["position"], r["recording_name"][:39], files))
         print("")
 
 
@@ -167,8 +166,8 @@ def scan_collection(path):
     at = AutoTagger()
     mapped, unidentified = at.map_collection(collection)
     print("Unmapped: %d items" % len(unidentified))
-#    for mdata in unidentified:
-#        print("   add %-31s %-31s" % (mdata["recording"][:30], mdata["artist"][:30]))
+    #    for mdata in unidentified:
+    #        print("   add %-31s %-31s" % (mdata["recording"][:30], mdata["artist"][:30]))
 
     print("  Mapped: %d items" % len(mapped))
 
