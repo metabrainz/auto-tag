@@ -62,7 +62,7 @@ class ScanCollection(object):
         ext = ext.lower()[1:]
         base = os.path.basename(relative_path)
         if ext not in SUPPORTED_FORMATS:
-            print("ignore %s" % base)
+#            print("ignore %s" % base)
             self.skipped += 1
             return
 
@@ -70,7 +70,7 @@ class ScanCollection(object):
             mdata = mp3.read(os.path.join(self.music_dir, relative_path))
         elif ext == "flac":
             mdata = flac.read(os.path.join(self.music_dir, relative_path))
-        print("   add %-31s %-31s" % (mdata["recording"][:30], mdata["artist"][:30]))
+#        print("   add %-31s %-31s" % (mdata["recording"][:30], mdata["artist"][:30]))
 
         mdata["file_name"] = fullpath
 
