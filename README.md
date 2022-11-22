@@ -41,3 +41,44 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ./auto_tag.py <audio file dir>
 ```
+
+Start with at most 1,000 audio files to begin with. Perhaps just a single release or small artist to get your feet wet.
+
+Example output
+--------------
+
+The following output show the output if you provide one single album of tracks:
+
+```
+(.ve) >./auto_tag.py ~/Downloads/test
+Scan collection...
+Map tracks...
+Load releases...
+Examine matches...
+FULL MATCH! (release group 053388 'Will of the People')
+  1   1 Will of the People                       01. Will Of The People.mp3
+  1   2 Compliance                               02. Compliance.mp3
+  1   3 Liberation                               03. Liberation.mp3
+  1   4 Won’t Stand Down                         04. Won’t Stand Down.mp3
+  1   5 Ghosts (How Can I Move On)               05. Ghosts (How Can I Move On).mp3
+  1   6 You Make Me Feel Like It’s Halloween     06. You Make Me Feel Like It's Halloween.mp3
+  1   7 Kill or Be Killed                        07. Kill Or Be Killed.mp3
+  1   8 Verona                                   08. Verona.mp3
+  1   9 Euphoria                                 09. Euphoria.mp3
+  1  10 We Are Fucking Fucked                    10. We Are Fucking Fucked.mp3
+
+FULL MATCH! (release group 237108 'Compliance')
+  1   1 Compliance                               02. Compliance.mp3
+  1   2 Won’t Stand Down                         04. Won’t Stand Down.mp3
+
+FULL MATCH! (release group 24a5c4 'Will of the People')
+  1   1 Will of the People                       01. Will Of The People.mp3
+  1   2 Compliance                               02. Compliance.mp3
+  1   3 Won’t Stand Down                         04. Won’t Stand Down.mp3
+
+FULL MATCH! (release group 6cf3ce 'Kill or Be Killed')
+  1   1 Kill or Be Killed                        07. Kill Or Be Killed.mp3
+  1   2 Will of the People                       01. Will Of The People.mp3
+  1   3 Compliance                               02. Compliance.mp3
+  1   4 Won’t Stand Down                         04. Won’t Stand Down.mp3
+```
